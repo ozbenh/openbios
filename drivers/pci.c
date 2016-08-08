@@ -38,6 +38,7 @@
 #include "drivers/usb.h"
 #endif
 
+//#define CONFIG_DEBUG_PCI
 #if defined (CONFIG_DEBUG_PCI)
 # define PCI_DPRINTF(format, ...) printk(format, ## __VA_ARGS__)
 #else
@@ -755,6 +756,7 @@ int macio_heathrow_config_cb (const pci_config_t *config)
 {
 	pci_set_ranges(config);
 
+        printk("heathrow config cb\n");
 #ifdef CONFIG_DRIVER_MACIO
         ob_macio_heathrow_init(config->path, config->assigned[0] & ~0x0000000F);
 #endif
@@ -765,6 +767,7 @@ int macio_keylargo_config_cb (const pci_config_t *config)
 {
         pci_set_ranges(config);
 
+        printk("keylargo config cb\n");
 #ifdef CONFIG_DRIVER_MACIO
         ob_macio_keylargo_init(config->path, config->assigned[0] & ~0x0000000F);
 #endif
@@ -1253,6 +1256,7 @@ static int ob_pci_read_identification(int bus, int devnum, int fn,
     if (pci_xbox_blacklisted (bus, devnum, fn))
         return;
 #endif
+    printk("PCI: probing bus %d dev %d ...\n", bus, devnum);
     addr = PCI_ADDR(bus, devnum, fn);
     vid = pci_config_read16(addr, PCI_VENDOR_ID);
     did = pci_config_read16(addr, PCI_DEVICE_ID);
@@ -1269,6 +1273,7 @@ static int ob_pci_read_identification(int bus, int devnum, int fn,
         *p_did = did;
     }
 
+    printk("PCI:  -> Found %04x,%04x\n", vid, did);
     ccode = pci_config_read16(addr, PCI_CLASS_DEVICE);
 
     if (p_class) {
@@ -1475,7 +1480,17 @@ static void ob_pci_host_set_interrupt_map(phandle_t host)
         set_int_property(target_node, "interrupt-parent", dnode);
 
         target_node = find_dev("/pci/mac-io/via-cuda");
-        set_int_property(target_node, "interrupt-parent", dnode);
+        if (target_node)
+                set_int_property(target_node, "interrupt-parent", dnode);
+        target_node = find_dev("/pci/mac-io/via-pmu");
+        if (target_node)
+                set_int_property(target_node, "interrupt-parent", dnode);
+        target_node = find_dev("/pci/mac-io/gpio/extint-gpio1");
+        if (target_node)
+                set_int_property(target_node, "interrupt-parent", dnode);
+        target_node = find_dev("/pci/mac-io/gpio/programmer-switch");
+        if (target_node)
+                set_int_property(target_node, "interrupt-parent", dnode);
 
         target_node = find_dev("/pci");
         set_int_property(target_node, "interrupt-parent", dnode);
@@ -1545,7 +1560,7 @@ int ob_pci_init(void)
     pci_config_t config = {}; /* host bridge */
     phandle_t phandle_host = 0;
 
-    PCI_DPRINTF("Initializing PCI host bridge...\n");
+    printk("Initializing PCI host bridge...\n");
 
     activate_device("/");
 
